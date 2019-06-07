@@ -302,14 +302,10 @@ class Router
                 $domain = $this->getCurrentDomain();
                 if ($item['domain']) {
                     if ($domain == $item['domain']) {
-                        $this->invoke($item['fn']);
-
-                        return;
+                        return $this->invoke($item['fn']);
                     }
                 } else {
-                    $this->invoke($item['fn']);
-
-                    return;
+                    return $this->invoke($item['fn']);
                 }
             }
         }
@@ -318,6 +314,8 @@ class Router
         } else {
             echo '404 Not Found';
         }
+
+        return null;
     }
 
     /**
@@ -339,8 +337,9 @@ class Router
 
         // Handle all routes
         $numHandled = 0;
+        $result = null;
         if (isset($this->attributes->afterRoutes[$this->requestedMethod])) {
-            $numHandled = $this->handle($this->attributes->afterRoutes[$this->requestedMethod], true);
+            list($numHandled, $result) = $this->handle($this->attributes->afterRoutes[$this->requestedMethod], true);
         }
 
         // If no route was handled, trigger the 404 (if any)
@@ -357,6 +356,9 @@ class Router
         if ($_SERVER['REQUEST_METHOD'] == 'HEAD') {
             ob_end_clean();
         }
+
+        $response = new Response($result);
+        $response->handle();
 
         // Return true if a route was handled, false otherwise
         return $numHandled !== 0;
@@ -385,10 +387,12 @@ class Router
      * @param array $routes       Collection of route patterns and their handling functions
      * @param bool  $quitAfterRun Does the handle function need to quit after one route was matched?
      *
-     * @return int The number of routes handled
+     * @return array The number of routes handled and result
      */
     private function handle($routes, $quitAfterRun = false)
     {
+        $result = null;
+
         // Counter to keep track of the number of routes we've handled
         $numHandled = 0;
 
@@ -425,7 +429,7 @@ class Router
                 }, $matches, array_keys($matches));
 
                 // Call the handling function with the URL parameters if the desired input is callable
-                $this->invoke($route['fn'], $params);
+                $result = $this->invoke($route['fn'], $params);
 
                 ++$numHandled;
 
@@ -436,8 +440,8 @@ class Router
             }
         }
 
-        // Return the number of routes handled
-        return $numHandled;
+        // Return the number of routes handled and result
+        return array($numHandled, $result);
     }
 
     /**
@@ -498,8 +502,9 @@ class Router
 
     private function invoke($fn, $params = array())
     {
+        $result = null;
         if (is_callable($fn)) {
-            call_user_func_array($fn, $params);
+            $result = call_user_func_array($fn, $params);
         }
 
         // If not, check the existence of special parameters
@@ -510,10 +515,7 @@ class Router
             if (class_exists($controller)) {
                 // First check if is a static method, directly trying to invoke it.
                 // If isn't a valid static method, we will try as a normal method invocation.
-                if (call_user_func_array(array(new $controller(), $method), $params) === false) {
-                    // Try to call the method as an non-static method. (the if does nothing, only avoids the notice)
-                    if (forward_static_call_array(array($controller, $method), $params) === false);
-                }
+                $result = call_user_func_array(array(new $controller(), $method), $params);
             }
         } elseif (stripos($fn, '::') !== false) {
             // Explode segments of given route
@@ -521,9 +523,11 @@ class Router
             // Check if class exists, if not just ignore and check if the class exists on the default namespace
             if (class_exists($controller)) {
                 // Try to call the method as an non-static method. (the if does nothing, only avoids the notice)
-                forward_static_call_array(array($controller, $method), $params);
+                $result = forward_static_call_array(array($controller, $method), $params);
             }
         }
+
+        return $result;
     }
 
     /**

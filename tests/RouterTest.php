@@ -429,6 +429,42 @@ namespace {
             $this->assertEquals('Admin\\LoginController@login3', $r1['fn']);
         }
 
+        public function testResponse()
+        {
+            $_SERVER['REQUEST_URI'] = '/novel/info?p1=1';
+
+            // Create Router instance
+            $router = new \Bramus\Router\Router();
+
+            $router->get('/novel/info', function () {
+                return 'abc666666';
+            });
+
+            ob_start();
+            $router->run();
+
+            $this->assertEquals('abc666666', ob_get_clean());
+        }
+
+        public function testResponse2()
+        {
+            $_SERVER['REQUEST_URI'] = '/admin/novel/info?p1=1';
+
+            // Create Router instance
+            $router = new \Bramus\Router\Router();
+
+            $router->ns('Admin')->prefix('/admin')->group(function (\Bramus\Router\Router $router) {
+                $router->get('/novel/info', function () {
+                    return 'abc666666';
+                });
+            });
+
+            ob_start();
+            $router->run();
+
+            $this->assertEquals('abc666666', ob_get_clean());
+        }
+
         public function testSubGroup()
         {
             $_SERVER['REQUEST_URI'] = '/admin/novel/aaa?p1=1';
