@@ -499,6 +499,23 @@ namespace {
             $this->assertEquals('Test4 test32 hello', ob_get_clean());
         }
 
+        public function testResponse5()
+        {
+            $_SERVER['REQUEST_URI'] = '/admin/novel/info?p1=1';
+
+            // Create Router instance
+            $router = new \Bramus\Router\Router();
+
+            $router->prefix('/admin')->group(function (\Bramus\Router\Router $router) {
+                $router->get('/novel/info', 'Test4@test5');
+            });
+
+            ob_start();
+            $router->run();
+
+            $this->assertEquals('Test4 __toString hello', ob_get_clean());
+        }
+
         public function testSubGroup()
         {
             $_SERVER['REQUEST_URI'] = '/admin/novel/aaa?p1=1';
@@ -1784,6 +1801,11 @@ namespace {
             return false;
         }
 
+        public static function test32()
+        {
+            return 'Test4 test32 hello';
+        }
+
         public function test1()
         {
             echo 'Test4 hello';
@@ -1796,9 +1818,14 @@ namespace {
             return 'Test4 test3 hello';
         }
 
-        public static function test32()
+        public function test5()
         {
-            return 'Test4 test32 hello';
+            return new static();
+        }
+
+        public function __toString()
+        {
+            return 'Test4 __toString hello';
         }
     }
 
