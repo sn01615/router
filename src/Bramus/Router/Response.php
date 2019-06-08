@@ -15,6 +15,7 @@ class Response
     {
         $result = $this->result;
         echo $result;
+
         return true;
     }
 }
